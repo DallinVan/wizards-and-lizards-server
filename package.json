@@ -1,0 +1,23 @@
+{
+  "name": "wizards-and-lizards-server",
+  "version": "1.0.0",
+  "description": "Wizards and lizards game server.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dvan93/wizards-and-lizards-server.git"
+  },
+  "author": "Dallin Van Mondfrans",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dvan93/wizards-and-lizards-server/issues"
+  },
+  "homepage": "https://github.com/dvan93/wizards-and-lizards-server#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
