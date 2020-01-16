@@ -4,7 +4,12 @@
   "description": "Wizards and lizards game server.",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "test"
+  },
+  "engines": {
+    "node": "12.13.0",
+    "npm": "6.12.0"
   },
   "repository": {
     "type": "git",
