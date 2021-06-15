@@ -3,6 +3,9 @@ const Deck = require('../models/Deck');
 // The referee is stateless. Enforces game rules.
 
 exports.canAddPlayerToGame = (game, playerId) => {
+    if (game.players.length >= game.numberOfPlayers) {
+        return false;
+    }
     return !game.getPlayer(playerId);
 }
 
@@ -61,6 +64,11 @@ exports.removePlayerFromGame = (game, playerId) => {
 exports.canAddPlayerToTeam = (game, playerId, teamId) => {
     const team = game.teams.find(t => t === teamId);
     const player = game.players.find(p => p.id === playerId);
+
+    // Make sure the team isn't already filled
+    if (game.players.filter(p => p.teamId === teamId).length >= (game.numberOfPlayers / game.teams.length)) {
+        return false;
+    }
     
     // If the team exists and either the player doesn't exist or the player isn't assigned to a team yet
     return team && (!player || !player.team);
@@ -73,6 +81,13 @@ exports.addPlayerToTeam = (game, playerId, teamId) => {
     }
 
     player.teamId = teamId;
+}
+
+exports.canAssignColorToPlayer = (game, playerId, color) => {
+    const playerWithColor = game.players.find(p => p.color === color);
+    game.colors.find(c => c === color);
+
+    return color && !playerWithColor;
 }
 
 exports.readyToStartGame = (game) => {
@@ -89,6 +104,18 @@ exports.readyToStartGame = (game) => {
     const team1 = game.players.filter(p => p.teamId === game.teams[0]);
     const team2 = game.players.filter(p => p.teamId === game.teams[1]);
     if (team1.length !== team2.length || team1.length + team2.length !== game.numberOfPlayers) {
+        return false;
+    }
+
+    // Check if each player has all necessary properties set
+    let playersAreReady = true;
+    game.players.forEach(p => {
+        if (!p.id || !p.teamId || !p.color) {
+            playersAreReady = false;
+        }
+    });
+
+    if (!playersAreReady) {
         return false;
     }
 
@@ -112,6 +139,7 @@ exports.startGame = (game) => {
     const i = Math.floor(Math.random() * game.players.length);
     let player = game.players[i];
     game.whosTurn = player.id;
+    game.firstPlayer = player.id;
 
     // Set each player's 'nextPlayer' property to ensure every other player is on a different team
     const playersNotAssignedATurn = game.players.filter(p => p.id !== player.id);

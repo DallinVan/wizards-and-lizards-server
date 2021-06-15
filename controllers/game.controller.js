@@ -4,7 +4,14 @@ const Game = require('../models/Game');
 const baseEndpoint = '/games';
 exports.addRoutes = (app) => {
     app.get(`${baseEndpoint}`, function(req, res) {
-        res.send(State.games);
+        const status = req.query.status;
+
+        let games = State.games;
+        if (status) {
+            games = games.filter(g => g.status === status);
+        }
+
+        res.send(games);
     });
     
     app.get(`${baseEndpoint}/:gameId`, function(req, res) {
@@ -17,12 +24,22 @@ exports.addRoutes = (app) => {
     });
     
     app.post(`${baseEndpoint}`, function(req, res) {
-        const numberOfPlayers = req.query.numberOfPlayers;
+        if (
+            !req.body
+            || !req.body.team1
+            || !req.body.team2
+            || !req.body.numberOfPlayers
+            || !req.body.numberOfJokers
+            || !req.body.ruleSet
+        ) {
+            res.status(400).send('Bad request');
+        }
         
         let newGame = new Game();
-        if (numberOfPlayers && !isNaN(numberOfPlayers)) {
-            newGame.numberOfPlayers = numberOfPlayers;
-        }
+        newGame.numberOfPlayers = req.body.numberOfPlayers;
+        newGame.numberOfJokers = req.body.numberOfJokers;
+        newGame.teams.push(req.body.team1);
+        newGame.teams.push(req.body.team2);
 
         State.games.push(newGame);
         res.send(newGame);

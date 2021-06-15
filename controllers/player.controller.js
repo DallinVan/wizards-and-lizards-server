@@ -8,7 +8,6 @@ exports.addRoutes = (app) => {
     app.post(`${baseEndpoint}/:playerId`, function(req, res) {
         const gameId = req.params.gameId;
         const playerId = req.params.playerId;
-        const teamId = req.query.teamId; // Query param (optional)
         
         // Get the game associated with this gameId
         const game = State.getGame(gameId);
@@ -16,10 +15,13 @@ exports.addRoutes = (app) => {
             res.status(404).send(`No game found with ID of '${gameId}'`);
             return;
         } else if (!Referee.canAddPlayerToGame(game, playerId)) {
-            res.status(409).send(`Player ID '${playerId}' is already in use.`);
+            res.status(409).send(`Cannot add player '${playerId}' to the game.`);
             return;
-        } else if (teamId && !Referee.canAddPlayerToTeam(game, playerId, teamId)) {
+        } else if (req.body.teamId && !Referee.canAddPlayerToTeam(game, playerId, req.body.teamId)) {
             res.status(409).send(`Cannot add player '${playerId}' to team '${teamId}'`);
+            return;
+        } else if (req.body.color && !Referee.canAssignColorToPlayer(game, playerId, req.body.color)) {
+            res.status(409).send('Cannot update player\'s color.');
             return;
         }
 
@@ -28,8 +30,52 @@ exports.addRoutes = (app) => {
 
         Referee.addPlayerToGame(game, player);
         
-        if (teamId) {
-            Referee.addPlayerToTeam(game, playerId, teamId);
+        if (req.body.teamId) {
+            Referee.addPlayerToTeam(game, playerId, req.body.teamId);
+        }
+        if (req.body.color) {
+            player.color = req.body.color;
+        }
+
+        if (Referee.readyToStartGame(game)) {
+            Referee.startGame(game);
+        }
+
+        res.send(game);
+        State.broadcastGameState(gameId);
+        return;
+    });
+
+    app.put(`${baseEndpoint}/:playerId`, function(req, res) {
+        const gameId = req.params.gameId;
+        const playerId = req.params.playerId;
+
+        // Get the game associated with this gameId
+        const game = State.getGame(gameId);
+        if (!req.body) {
+            res.status(400).send('Bad request. No payload.');
+            return;
+        } else if (!game) {
+            res.status(404).send(`No game found with ID of '${gameId}'`);
+            return;
+        } else if (!game.players.find(p => p.id === playerId)) {
+            res.status(404).send(`No player with id ${playerId} associated with this game.`);
+            return;
+        } else if (req.body.teamId && !Referee.canAddPlayerToTeam(game, playerId, req.body.teamId)) {
+            res.status(409).send(`Cannot add player '${playerId}' to team '${req.body.teamId}'`);
+            return;
+        } else if (req.body.color && !Referee.canAssignColorToPlayer(game, playerId, req.body.color)) {
+            res.status(409).send('Cannot update player\'s color.');
+            return;
+        }
+
+        // Find and update the player
+        const player = game.players.find(p => p.id === playerId);
+        if (req.body.teamId) {
+            player.teamId = req.body.teamId;
+        }
+        if (req.body.color) {
+            player.color = req.body.color;
         }
 
         if (Referee.readyToStartGame(game)) {
@@ -66,7 +112,7 @@ exports.addRoutes = (app) => {
         const gameId = req.params.gameId;
         const playerId = req.params.playerId;
     
-        const game = getGame(gameId);
+        const game = State.getGame(gameId);
         if (!game) {
             res.status(404).send('Game not found.');
             return;
@@ -75,10 +121,22 @@ exports.addRoutes = (app) => {
             res.status(409).send(`Not your turn. It's ${game.whosTurn}'s turn.`);
             return;
         }
-    
+        if (!req.body.cardToPlay || !req.body.cardToPlay.suit || !req.body.cardToPlay.value) {
+            res.status(400).send('Must play a card to take your turn.');
+            return;
+        }
+
+        // TODO: check with referee if card can be played
+
+        // Play the card and draw a new one (TODO: make the referee do this)
         const player = game.getPlayer(playerId);
+        const cardToPlay = req.body.cardToPlay;
+        player.deck.discardCard(cardToPlay);
+        player.deck.draw(1);
+    
+        // Set the turn to be the next player 
         game.whosTurn = player.nextPlayer;
-        res.send(game);
         State.broadcastGameState(gameId);
+        res.send(game);
     });
 };

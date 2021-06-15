@@ -1,6 +1,6 @@
 const Card = require('./Card');
 
-const cardSuits = ['spades', 'hearts', 'clubs', 'diamonds'];
+const cardSuits = ['S', 'H', 'C', 'D'];
 const cardValues = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
 class Deck {
@@ -39,12 +39,18 @@ class Deck {
     }
 
     draw(cardsToDraw = 1) {
+        // If no cards to draw, shuffle discard pile and create new deck of drawable cards
+        if (this.cards.length < cardsToDraw) {
+            this.cards = this.discard;
+            this.shuffled();
+        }
+
         for (let i = 0; i < cardsToDraw; i++) {
             this.hand.push(this.cards.pop());
         }
     }
 
-    discard(cardInHand) {
+    discardCard(cardInHand) {
         const i = this.hand.findIndex(c => c.suit === cardInHand.suit && c.value === cardInHand.value);
         if (i < 0) {
             throw new Error('Card not found in hand, cannot discard.');
